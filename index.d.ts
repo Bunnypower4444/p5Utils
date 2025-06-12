@@ -163,7 +163,7 @@ declare namespace p5Utils.Ext {
             draw(graphics: RenderTarget, position: Vector2, textSize: number, font: string, justify?: Vector2, alpha?: number): void;
         }
     }
-    namespace FancyTextAnimations {
+    namespace FancyText.Animations {
         type AnimTextPropertiesData = FancyText.TextPropertiesData & {
             animID?: string | string[];
         };

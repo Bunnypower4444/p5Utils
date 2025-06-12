@@ -383,153 +383,155 @@ var p5Utils;
             }
             FancyText.TextSegment = TextSegment;
         })(FancyText = Ext.FancyText || (Ext.FancyText = {}));
-        let FancyTextAnimations;
-        (function (FancyTextAnimations) {
-            class AnimTextProperties extends FancyText.TextProperties {
-                animID;
-                constructor(props) {
-                    super(props);
-                    if (!props)
-                        return;
-                    if (typeof props.animID == "string")
-                        props.animID = [props.animID];
-                    this.animID = props.animID;
-                }
-            }
-            FancyTextAnimations.AnimTextProperties = AnimTextProperties;
-            class AnimTextSegment extends FancyText.TextSegment {
-                constructor(textOrData, properties) {
-                    if (typeof textOrData == "string") {
-                        if (properties instanceof AnimTextProperties)
-                            super(textOrData, properties);
-                        else
-                            super(textOrData, new AnimTextProperties(properties));
-                    }
-                    else {
-                        if (textOrData.properties && !(textOrData.properties instanceof AnimTextProperties))
-                            textOrData.properties = new AnimTextProperties(textOrData.properties);
-                        super(textOrData);
+        (function (FancyText) {
+            let Animations;
+            (function (Animations) {
+                class AnimTextProperties extends FancyText.TextProperties {
+                    animID;
+                    constructor(props) {
+                        super(props);
+                        if (!props)
+                            return;
+                        if (typeof props.animID == "string")
+                            props.animID = [props.animID];
+                        this.animID = props.animID;
                     }
                 }
-            }
-            FancyTextAnimations.AnimTextSegment = AnimTextSegment;
-            function create(segments) {
-                return segments.map(v => new AnimTextSegment(v));
-            }
-            FancyTextAnimations.create = create;
-            /**
-             *
-             * @param graphics
-             * @param lines
-             * @param position
-             * @param textSize
-             * @param font
-             * @param t The animation progress. Each 1.00 represents one line finished.
-             * @param justify
-             */
-            function draw(graphics, lines, position, textSize, font, t, justify) {
-                // for the textLeading
-                graphics.push();
-                graphics.textFont(font);
-                graphics.textSize(textSize);
-                const leading = graphics.textLeading();
-                graphics.pop();
-                // this will be determined when that line is drawn
-                let animationStartPos = {};
-                let animationEndPos = {};
-                if (t >= 1 && t < lines.length) {
-                    let movingIndex = Math.floor(t);
-                    // adjust for justify
-                    let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(lines[movingIndex], textSize, font), textSize)));
-                    pos.y += movingIndex * leading;
-                    /**
-                     * [First segment, left x-coord of first segment, right x-coord of last segment]
-                     */
-                    let positions = {};
-                    for (const segment of lines[movingIndex]) {
-                        let ids = segment.properties.animID;
-                        let width = segment.getWidth(textSize, font);
-                        if (ids)
-                            for (const id of ids)
-                                (positions[id] ??= [segment, pos.x, 0])[2] = pos.x + width;
-                        pos = pos.withX(pos.x + width);
-                    }
-                    for (const id in positions) {
-                        if (Object.prototype.hasOwnProperty.call(positions, id)) {
-                            const animGroup = positions[id];
-                            // Find the center of the segments: avg of left and rightmost points
-                            animationEndPos[id] = [animGroup[0], new p5Utils.Vector2((animGroup[1] + animGroup[2]) / 2, pos.y)];
+                Animations.AnimTextProperties = AnimTextProperties;
+                class AnimTextSegment extends FancyText.TextSegment {
+                    constructor(textOrData, properties) {
+                        if (typeof textOrData == "string") {
+                            if (properties instanceof AnimTextProperties)
+                                super(textOrData, properties);
+                            else
+                                super(textOrData, new AnimTextProperties(properties));
+                        }
+                        else {
+                            if (textOrData.properties && !(textOrData.properties instanceof AnimTextProperties))
+                                textOrData.properties = new AnimTextProperties(textOrData.properties);
+                            super(textOrData);
                         }
                     }
                 }
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    // If this line is already fully animated
-                    if (t >= i + 1) {
+                Animations.AnimTextSegment = AnimTextSegment;
+                function create(segments) {
+                    return segments.map(v => new AnimTextSegment(v));
+                }
+                Animations.create = create;
+                /**
+                 *
+                 * @param graphics
+                 * @param lines
+                 * @param position
+                 * @param textSize
+                 * @param font
+                 * @param t The animation progress. Each 1.00 represents one line finished.
+                 * @param justify
+                 */
+                function draw(graphics, lines, position, textSize, font, t, justify) {
+                    // for the textLeading
+                    graphics.push();
+                    graphics.textFont(font);
+                    graphics.textSize(textSize);
+                    const leading = graphics.textLeading();
+                    graphics.pop();
+                    // this will be determined when that line is drawn
+                    let animationStartPos = {};
+                    let animationEndPos = {};
+                    if (t >= 1 && t < lines.length) {
+                        let movingIndex = Math.floor(t);
                         // adjust for justify
-                        let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(line, textSize, font), textSize)));
-                        for (const segment of line) {
-                            segment.draw(graphics, pos, textSize, font, p5Utils.Vector2.zero);
+                        let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(lines[movingIndex], textSize, font), textSize)));
+                        pos.y += movingIndex * leading;
+                        /**
+                         * [First segment, left x-coord of first segment, right x-coord of last segment]
+                         */
+                        let positions = {};
+                        for (const segment of lines[movingIndex]) {
                             let ids = segment.properties.animID;
                             let width = segment.getWidth(textSize, font);
-                            // Only add to animationStartPos if this is the last fully animated line
-                            if (ids && t < i + 2)
-                                for (const id of ids) {
-                                    (animationStartPos[id] ??= { segments: [], centerX: 0 }).segments.push([segment, pos]);
-                                    // For now, store rightmost point in centerX
-                                    animationStartPos[id].centerX = pos.x + width;
-                                }
+                            if (ids)
+                                for (const id of ids)
+                                    (positions[id] ??= [segment, pos.x, 0])[2] = pos.x + width;
                             pos = pos.withX(pos.x + width);
                         }
-                        // Determine the center for all animation groups
-                        if (t < i + 2) {
-                            for (const id in animationStartPos) {
-                                if (Object.prototype.hasOwnProperty.call(animationStartPos, id)) {
-                                    const group = animationStartPos[id];
-                                    // Find the center of the segments: avg of left and rightmost points
-                                    group.centerX = (group.segments[0][1].x + group.centerX) / 2;
+                        for (const id in positions) {
+                            if (Object.prototype.hasOwnProperty.call(positions, id)) {
+                                const animGroup = positions[id];
+                                // Find the center of the segments: avg of left and rightmost points
+                                animationEndPos[id] = [animGroup[0], new p5Utils.Vector2((animGroup[1] + animGroup[2]) / 2, pos.y)];
+                            }
+                        }
+                    }
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        // If this line is already fully animated
+                        if (t >= i + 1) {
+                            // adjust for justify
+                            let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(line, textSize, font), textSize)));
+                            for (const segment of line) {
+                                segment.draw(graphics, pos, textSize, font, p5Utils.Vector2.zero);
+                                let ids = segment.properties.animID;
+                                let width = segment.getWidth(textSize, font);
+                                // Only add to animationStartPos if this is the last fully animated line
+                                if (ids && t < i + 2)
+                                    for (const id of ids) {
+                                        (animationStartPos[id] ??= { segments: [], centerX: 0 }).segments.push([segment, pos]);
+                                        // For now, store rightmost point in centerX
+                                        animationStartPos[id].centerX = pos.x + width;
+                                    }
+                                pos = pos.withX(pos.x + width);
+                            }
+                            // Determine the center for all animation groups
+                            if (t < i + 2) {
+                                for (const id in animationStartPos) {
+                                    if (Object.prototype.hasOwnProperty.call(animationStartPos, id)) {
+                                        const group = animationStartPos[id];
+                                        // Find the center of the segments: avg of left and rightmost points
+                                        group.centerX = (group.segments[0][1].x + group.centerX) / 2;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else if (t >= i) {
-                        // adjust for justify
-                        let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(line, textSize, font), textSize)));
-                        for (const segment of line) {
-                            let ids = segment.properties.animID;
-                            // There will be nothing to animate from if this is the first line
-                            if (ids && i > 0) {
-                                for (const id of ids)
-                                    if (animationStartPos[id]) {
-                                        const endPos = animationEndPos[id][1];
-                                        const midX = animationStartPos[id].centerX;
-                                        let midPos = new p5Utils.Vector2(midX, pos.y - leading);
-                                        let easedPos = midPos.lerp(endPos, p5Utils.Easings.sin.inout(t - i));
-                                        // Only draw previous ones once
-                                        if (animationEndPos[id][0] == segment) {
-                                            for (const prev of animationStartPos[id].segments) {
-                                                let offset = prev[1].sub(midPos);
-                                                prev[0].draw(graphics, easedPos.add(offset), textSize, font, p5Utils.Vector2.zero, 255 * (1 - p5Utils.Easings.quint.inout(t - i)));
+                        else if (t >= i) {
+                            // adjust for justify
+                            let pos = position.sub(justify.mult(new p5Utils.Vector2(FancyText.getWidth(line, textSize, font), textSize)));
+                            for (const segment of line) {
+                                let ids = segment.properties.animID;
+                                // There will be nothing to animate from if this is the first line
+                                if (ids && i > 0) {
+                                    for (const id of ids)
+                                        if (animationStartPos[id]) {
+                                            const endPos = animationEndPos[id][1];
+                                            const midX = animationStartPos[id].centerX;
+                                            let midPos = new p5Utils.Vector2(midX, pos.y - leading);
+                                            let easedPos = midPos.lerp(endPos, p5Utils.Easings.sin.inout(t - i));
+                                            // Only draw previous ones once
+                                            if (animationEndPos[id][0] == segment) {
+                                                for (const prev of animationStartPos[id].segments) {
+                                                    let offset = prev[1].sub(midPos);
+                                                    prev[0].draw(graphics, easedPos.add(offset), textSize, font, p5Utils.Vector2.zero, 255 * (1 - p5Utils.Easings.quint.inout(t - i)));
+                                                }
                                             }
+                                            /* let easedPos = animationStartPos[id][0][1].lerp(pos, Easings.sin.inout(t - i));
+            
+                                            animationStartPos[id][0].draw(
+                                                graphics, easedPos, textSize, font, Vector2.zero, 255 * (1 - Easings.quint.inout(t - i))); */
+                                            let offset = pos.sub(endPos);
+                                            segment.draw(graphics, easedPos.add(offset), textSize, font, p5Utils.Vector2.zero, 255 * p5Utils.Easings.quint.inout(t - i));
                                         }
-                                        /* let easedPos = animationStartPos[id][0][1].lerp(pos, Easings.sin.inout(t - i));
-        
-                                        animationStartPos[id][0].draw(
-                                            graphics, easedPos, textSize, font, Vector2.zero, 255 * (1 - Easings.quint.inout(t - i))); */
-                                        let offset = pos.sub(endPos);
-                                        segment.draw(graphics, easedPos.add(offset), textSize, font, p5Utils.Vector2.zero, 255 * p5Utils.Easings.quint.inout(t - i));
-                                    }
+                                }
+                                else {
+                                    segment.draw(graphics, pos, textSize, font, p5Utils.Vector2.zero, 255 * p5Utils.Easings.quint.inout(t - i));
+                                }
+                                pos = pos.withX(pos.x + segment.getWidth(textSize, font));
                             }
-                            else {
-                                segment.draw(graphics, pos, textSize, font, p5Utils.Vector2.zero, 255 * p5Utils.Easings.quint.inout(t - i));
-                            }
-                            pos = pos.withX(pos.x + segment.getWidth(textSize, font));
                         }
+                        position = position.withY(position.y + leading);
                     }
-                    position = position.withY(position.y + leading);
                 }
-            }
-            FancyTextAnimations.draw = draw;
-        })(FancyTextAnimations = Ext.FancyTextAnimations || (Ext.FancyTextAnimations = {}));
+                Animations.draw = draw;
+            })(Animations = FancyText.Animations || (FancyText.Animations = {}));
+        })(FancyText = Ext.FancyText || (Ext.FancyText = {}));
     })(Ext = p5Utils.Ext || (p5Utils.Ext = {}));
 })(p5Utils || (p5Utils = {}));

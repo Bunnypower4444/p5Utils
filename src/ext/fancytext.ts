@@ -149,7 +149,7 @@ namespace p5Utils.Ext
         }
     }
 
-    export namespace FancyTextAnimations
+    export namespace FancyText.Animations
     {
         export type AnimTextPropertiesData = FancyText.TextPropertiesData & { animID?: string | string[] };
 
