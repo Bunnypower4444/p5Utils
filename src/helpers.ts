@@ -3,6 +3,9 @@ type Renderer = typeof globalThis;
 type Graphics = typeof globalThis;
 type RenderTarget = Graphics | Renderer;
 
+declare const WEBGL2: string;
+type RendererType = typeof P2D | typeof WEBGL | typeof WEBGL2;
+
 type TextStyle = typeof NORMAL | typeof BOLD | typeof ITALIC | typeof BOLDITALIC;
 type TextAlignHoriz = typeof LEFT | typeof CENTER | typeof RIGHT;
 type TextAlignVert = typeof TOP | typeof CENTER | typeof BOTTOM | typeof BASELINE;
@@ -10,7 +13,9 @@ type TextAlignVert = typeof TOP | typeof CENTER | typeof BOTTOM | typeof BASELIN
 type ColorLike = number | string | number[];
 
 declare function createCanvas(w: number, h: number, canvas: HTMLCanvasElement): Renderer;
+declare function createCanvas(w: number, h: number, renderer: RendererType, canvas: HTMLCanvasElement): Renderer;
 declare function fill(color: ColorLike): void;
+declare function stroke(color: ColorLike): void;
 
 namespace p5Utils
 {
