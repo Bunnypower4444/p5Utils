@@ -320,6 +320,8 @@ var p5Utils;
             }
             FancyText.create = create;
             function draw(graphics, segments, position, textSize, font, justify, alpha = 255) {
+                if (segments.length <= 0)
+                    return;
                 graphics.push();
                 // adjust for justify
                 position = position.sub(justify.mult(new p5Utils.Vector2(getWidth(segments, textSize, font), textSize)));
@@ -330,6 +332,19 @@ var p5Utils;
                 graphics.pop();
             }
             FancyText.draw = draw;
+            function drawEnterAnim(graphics, segments, position, textSize, font, time, enterAnim, justify, alpha = 255) {
+                if (time <= 0 || segments.length <= 0)
+                    return;
+                graphics.push();
+                // adjust for justify
+                position = position.sub(justify.mult(new p5Utils.Vector2(getWidth(segments, textSize, font), textSize)));
+                for (const segment of segments) {
+                    segment.drawEnterAnim(graphics, position, textSize, font, time, enterAnim, p5Utils.Vector2.zero, alpha);
+                    position = position.withX(position.x + segment.getWidth(textSize, font));
+                }
+                graphics.pop();
+            }
+            FancyText.drawEnterAnim = drawEnterAnim;
             function getWidth(segments, textSize, font) {
                 let w = 0;
                 for (const segment of segments) {
@@ -385,6 +400,8 @@ var p5Utils;
                     return p5Utils.DrawUtils.textWidth(this.text, font, textSize * sizeFactor, this.properties.style);
                 }
                 draw(graphics, position, textSize, font, justify, alpha = 255) {
+                    if (this.text.length <= 0)
+                        return;
                     if (!justify)
                         justify = p5Utils.Vector2.zero;
                     graphics.push();
@@ -392,8 +409,7 @@ var p5Utils;
                     graphics.textAlign(LEFT, TOP);
                     graphics.textFont(font);
                     graphics.textStyle(this.properties.style);
-                    //@ts-expect-error
-                    let col = color(this.properties.color).levels;
+                    let col = p5Utils.ColorUtils.getRGBAValues(this.properties.color);
                     if (alpha < 255)
                         col[3] = alpha;
                     graphics.fill(col);
@@ -408,6 +424,54 @@ var p5Utils;
                     graphics.translate(position.x - justify.x * this.getWidth(textSize, font), position.y - justify.y * textSize + yOffset);
                     graphics.scale(scale);
                     graphics.text(this.text, 0, 0);
+                    graphics.pop();
+                }
+                drawEnterAnim(graphics, position, textSize, font, time, enterAnim, justify, alpha = 255) {
+                    if (time <= 0 || this.text.length <= 0)
+                        return;
+                    if (time >= 1) {
+                        this.draw(graphics, position, textSize, font, justify, alpha);
+                        return;
+                    }
+                    if (!justify)
+                        justify = p5Utils.Vector2.zero;
+                    graphics.push();
+                    graphics.textSize(textSize);
+                    graphics.textAlign(LEFT, TOP);
+                    graphics.textFont(font);
+                    graphics.textStyle(this.properties.style);
+                    let col = p5Utils.ColorUtils.getRGBAValues(this.properties.color);
+                    if (alpha < 255)
+                        col[3] = alpha;
+                    graphics.fill(col);
+                    graphics.strokeWeight(0);
+                    let scale = this.properties.script != TextProperties.Script.Normal
+                        ? FancyText.ScriptScale : 1;
+                    let yOffset = 0;
+                    if (this.properties.script == TextProperties.Script.Subscript)
+                        yOffset = 0.6 * textSize;
+                    else if (this.properties.script == TextProperties.Script.Superscript)
+                        yOffset = -0.1 * textSize;
+                    graphics.translate(position.x - justify.x * this.getWidth(textSize, font), position.y - justify.y * textSize + yOffset);
+                    graphics.scale(scale);
+                    const delayCharTimeRatio = enterAnim.relativeCharDelay / enterAnim.relativeTimePerChar;
+                    const animRelativeTime = (this.text.length - 1) * delayCharTimeRatio + 1;
+                    let completedChars = time * animRelativeTime < 1
+                        ? 0
+                        : 1 + Math.floor((time * animRelativeTime - 1) / delayCharTimeRatio);
+                    let completedStr = this.text.slice(0, completedChars);
+                    graphics.text(completedStr, 0, 0);
+                    // use unscaled textSize bc it will be scaled later by the graphics.scale()
+                    let xOffset = p5Utils.DrawUtils.textWidth(completedStr, font, textSize, this.properties.style);
+                    let animDir = enterAnim.direction.normalize();
+                    let len = Math.min(this.text.length, completedChars + Math.ceil(1 / delayCharTimeRatio));
+                    for (let i = completedChars; i < len; i++) {
+                        let ease = enterAnim.ease(time * animRelativeTime - i * delayCharTimeRatio);
+                        const char = this.text[i];
+                        let animOffset = animDir.mult(textSize * ease * enterAnim.relativeDistance);
+                        graphics.text(char, xOffset + animOffset.x, animOffset.y);
+                        xOffset += p5Utils.DrawUtils.textWidth(char, font, textSize, this.properties.style);
+                    }
                     graphics.pop();
                 }
             }
@@ -459,6 +523,8 @@ var p5Utils;
                  * @param justify
                  */
                 function draw(graphics, lines, position, textSize, font, t, justify) {
+                    if (t <= 0 || lines.length <= 0)
+                        return;
                     // for the textLeading
                     graphics.push();
                     graphics.textFont(font);

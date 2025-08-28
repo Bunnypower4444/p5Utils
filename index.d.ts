@@ -147,6 +147,7 @@ declare namespace p5Utils.Ext {
     namespace FancyText {
         function create(segments: FancyText.TextSegmentData[]): FancyText;
         function draw(graphics: RenderTarget, segments: FancyText, position: Vector2, textSize: number, font: string, justify?: Vector2, alpha?: number): void;
+        function drawEnterAnim(graphics: RenderTarget, segments: FancyText, position: Vector2, textSize: number, font: string, time: number, enterAnim: EnterAnimation, justify?: Vector2, alpha?: number): void;
         function getWidth(segments: FancyText, textSize: number, font: string): number;
         const ScriptScale = 0.5;
         type TextPropertiesData = {
@@ -176,7 +177,27 @@ declare namespace p5Utils.Ext {
             constructor(data: TextSegmentData);
             getWidth(textSize: number, font: string): number;
             draw(graphics: RenderTarget, position: Vector2, textSize: number, font: string, justify?: Vector2, alpha?: number): void;
+            drawEnterAnim(graphics: RenderTarget, position: Vector2, textSize: number, font: string, time: number, enterAnim: EnterAnimation, justify?: Vector2, alpha?: number): void;
         }
+        type EnterAnimation = {
+            /**
+             * Time it takes for a character to go from hidden to fully visible,
+             * relative to `relativeCharDelay`
+             */
+            relativeTimePerChar: number;
+            /**
+             * Duration of the wait time between characters, relative to
+             * `relativeTimePerChar`
+             */
+            relativeCharDelay: number;
+            ease: Easings.EaseFunction;
+            direction: Vector2;
+            /**
+             * The distance that the text moves when being animated in,
+             * expressed as a proportion of the text size.
+             */
+            relativeDistance: number;
+        };
     }
     namespace FancyText.Animations {
         type AnimTextPropertiesData = FancyText.TextPropertiesData & {

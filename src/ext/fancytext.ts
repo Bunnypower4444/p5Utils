@@ -10,8 +10,13 @@ namespace p5Utils.Ext
             return segments.map(v => new FancyText.TextSegment(v));
         }
 
-        export function draw(graphics: RenderTarget, segments: FancyText, position: Vector2, textSize: number, font: string, justify?: Vector2, alpha: number = 255)
+        export function draw(graphics: RenderTarget, segments: FancyText,
+            position: Vector2, textSize: number, font: string,
+            justify?: Vector2, alpha: number = 255)
         {
+            if (segments.length <= 0)
+                return;
+
             graphics.push();
 
             // adjust for justify
@@ -21,6 +26,31 @@ namespace p5Utils.Ext
             for (const segment of segments)
             {
                 segment.draw(graphics, position, textSize, font, Vector2.zero, alpha);
+
+                position = position.withX(position.x + segment.getWidth(textSize, font));
+            }
+
+            graphics.pop();
+        }
+
+        export function drawEnterAnim(graphics: RenderTarget, segments: FancyText,
+            position: Vector2, textSize: number, font: string,
+            time: number, enterAnim: EnterAnimation,
+            justify?: Vector2, alpha: number = 255)
+        {
+            if (time <= 0 || segments.length <= 0)
+                return;
+
+            graphics.push();
+
+            // adjust for justify
+            position = position.sub(
+                justify.mult(
+                    new Vector2(getWidth(segments, textSize, font), textSize)));
+            for (const segment of segments)
+            {
+                // TODO: CALCULATE CORRECT TIMES!!!!
+                segment.drawEnterAnim(graphics, position, textSize, font, time, enterAnim, Vector2.zero, alpha);
 
                 position = position.withX(position.x + segment.getWidth(textSize, font));
             }
@@ -109,8 +139,13 @@ namespace p5Utils.Ext
                     textSize * sizeFactor, this.properties.style);
             }
 
-            public draw(graphics: RenderTarget, position: Vector2, textSize: number, font: string, justify?: Vector2, alpha: number = 255)
+            public draw(graphics: RenderTarget, position: Vector2,
+                textSize: number, font: string,
+                justify?: Vector2, alpha: number = 255)
             {
+                if (this.text.length <= 0)
+                    return;
+
                 if (!justify)
                     justify = Vector2.zero;
 
@@ -121,8 +156,7 @@ namespace p5Utils.Ext
                 graphics.textFont(font);
                 graphics.textStyle(this.properties.style);
 
-                //@ts-expect-error
-                let col = color(this.properties.color).levels;
+                let col = ColorUtils.getRGBAValues(this.properties.color);
                 if (alpha < 255)
                     col[3] = alpha;
 
@@ -146,6 +180,101 @@ namespace p5Utils.Ext
 
                 graphics.pop();
             }
+
+            public drawEnterAnim(graphics: RenderTarget, position: Vector2,
+                textSize: number, font: string,
+                time: number, enterAnim: EnterAnimation,
+                justify?: Vector2, alpha: number = 255)
+            {
+                if (time <= 0 || this.text.length <= 0)
+                    return;
+                if (time >= 1)
+                {
+                    this.draw(graphics, position, textSize, font, justify, alpha);
+                    return;
+                }
+
+                if (!justify)
+                    justify = Vector2.zero;
+
+                graphics.push();
+
+                graphics.textSize(textSize);
+                graphics.textAlign(LEFT, TOP);
+                graphics.textFont(font);
+                graphics.textStyle(this.properties.style);
+
+                let col = ColorUtils.getRGBAValues(this.properties.color);
+                if (alpha < 255)
+                    col[3] = alpha;
+
+                graphics.fill(col);
+                graphics.strokeWeight(0);
+
+                let scale = this.properties.script != TextProperties.Script.Normal
+                    ? ScriptScale : 1;
+                let yOffset = 0;
+                if (this.properties.script == TextProperties.Script.Subscript)
+                    yOffset = 0.6 * textSize;
+                else if (this.properties.script == TextProperties.Script.Superscript)
+                    yOffset = -0.1 * textSize;
+                graphics.translate(
+                    position.x - justify.x * this.getWidth(textSize, font),
+                    position.y - justify.y * textSize + yOffset);
+                
+                graphics.scale(scale);
+
+                const delayCharTimeRatio = enterAnim.relativeCharDelay / enterAnim.relativeTimePerChar;
+                const animRelativeTime = (this.text.length - 1) * delayCharTimeRatio + 1;
+
+                let completedChars = time * animRelativeTime < 1
+                    ? 0
+                    : 1 + Math.floor((time * animRelativeTime - 1) / delayCharTimeRatio);
+                
+                let completedStr = this.text.slice(0, completedChars);
+                
+                graphics.text(completedStr, 0, 0);
+                
+                // use unscaled textSize bc it will be scaled later by the graphics.scale()
+                let xOffset = DrawUtils.textWidth(completedStr, font, textSize, this.properties.style);
+
+                let animDir = enterAnim.direction.normalize();
+                
+                let len = Math.min(this.text.length, completedChars + Math.ceil(1 / delayCharTimeRatio));
+                for (let i = completedChars; i < len; i++)
+                {
+                    let ease = enterAnim.ease(time * animRelativeTime - i * delayCharTimeRatio);
+                    const char = this.text[i];
+
+                    let animOffset = animDir.mult(textSize * ease * enterAnim.relativeDistance);
+                    graphics.text(char, xOffset + animOffset.x, animOffset.y);
+                    
+                    xOffset += DrawUtils.textWidth(char, font, textSize, this.properties.style);
+                }
+
+                graphics.pop();
+            }
+        }
+
+        export type EnterAnimation =
+        {
+            /**
+             * Time it takes for a character to go from hidden to fully visible,
+             * relative to `relativeCharDelay`
+             */
+            relativeTimePerChar: number,
+            /**
+             * Duration of the wait time between characters, relative to
+             * `relativeTimePerChar`
+             */
+            relativeCharDelay: number,
+            ease: Easings.EaseFunction,
+            direction: Vector2,
+            /**
+             * The distance that the text moves when being animated in,
+             * expressed as a proportion of the text size.
+             */
+            relativeDistance: number
         }
     }
 
@@ -217,6 +346,9 @@ namespace p5Utils.Ext
          */
         export function draw(graphics: RenderTarget, lines: FancyText[], position: Vector2, textSize: number, font: string, t: number, justify?: Vector2)
         {
+            if (t <= 0 || lines.length <= 0)
+                return;
+
             // for the textLeading
             graphics.push();
             graphics.textFont(font);
