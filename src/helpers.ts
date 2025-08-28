@@ -9,13 +9,16 @@ type RendererType = typeof P2D | typeof WEBGL | typeof WEBGL2;
 type TextStyle = typeof NORMAL | typeof BOLD | typeof ITALIC | typeof BOLDITALIC;
 type TextAlignHoriz = typeof LEFT | typeof CENTER | typeof RIGHT;
 type TextAlignVert = typeof TOP | typeof CENTER | typeof BOTTOM | typeof BASELINE;
+type ColorMode = typeof RGB | typeof HSL | typeof HSB;
 
 type ColorLike = number | string | number[];
+
 
 declare function createCanvas(w: number, h: number, canvas: HTMLCanvasElement): Renderer;
 declare function createCanvas(w: number, h: number, renderer: RendererType, canvas: HTMLCanvasElement): Renderer;
 declare function fill(color: ColorLike): void;
 declare function stroke(color: ColorLike): void;
+declare function color(color: ColorLike): any;
 
 namespace p5Utils
 {
@@ -51,6 +54,47 @@ namespace p5Utils
 
             else
                 return new Vector2(maxY * aspectRatio, maxY);
+        }
+    }
+
+    /**
+     * Contains static methods that help with using and accessing data from the p5.Color class
+     */
+    export class ColorUtils
+    {
+        private constructor()
+        {
+            throw new TypeError("Cannot make instance of ColorUtils");
+        }
+
+        public static isColorLike(color: any): boolean
+        {
+            //@ts-expect-error
+            if (!(color instanceof p5.Color)
+                && !Array.isArray(color)
+                && typeof color != "string"
+                && typeof color != "number")
+                return false;
+            
+            return true;
+        }
+
+        public static getRGBAValues(value: ColorLike | any): number[]
+        {
+            if (!this.isColorLike(value))
+                throw new TypeError("Color provided to ColorUtils.getValues() is not an acceptable color value");
+
+            //@ts-expect-error
+            return color(value).levels;
+        }
+
+        public static getNormalizedRGBAValues(value: ColorLike | any): number[]
+        {
+            if (!this.isColorLike(value))
+                throw new TypeError("Color provided to ColorUtils.getNormalizedValues() is not an acceptable color value");
+        
+            //@ts-expect-error
+            return color(value)._array;
         }
     }
 

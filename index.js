@@ -26,6 +26,36 @@ var p5Utils;
         }
     }
     p5Utils.CanvasUtils = CanvasUtils;
+    /**
+     * Contains static methods that help with using and accessing data from the p5.Color class
+     */
+    class ColorUtils {
+        constructor() {
+            throw new TypeError("Cannot make instance of ColorUtils");
+        }
+        static isColorLike(color) {
+            //@ts-expect-error
+            if (!(color instanceof p5.Color)
+                && !Array.isArray(color)
+                && typeof color != "string"
+                && typeof color != "number")
+                return false;
+            return true;
+        }
+        static getRGBAValues(value) {
+            if (!this.isColorLike(value))
+                throw new TypeError("Color provided to ColorUtils.getValues() is not an acceptable color value");
+            //@ts-expect-error
+            return color(value).levels;
+        }
+        static getNormalizedRGBAValues(value) {
+            if (!this.isColorLike(value))
+                throw new TypeError("Color provided to ColorUtils.getNormalizedValues() is not an acceptable color value");
+            //@ts-expect-error
+            return color(value)._array;
+        }
+    }
+    p5Utils.ColorUtils = ColorUtils;
     class DrawUtils {
         constructor() {
             throw new TypeError("Cannot make instance of DrawUtils");

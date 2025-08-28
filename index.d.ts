@@ -6,11 +6,13 @@ type RendererType = typeof P2D | typeof WEBGL | typeof WEBGL2;
 type TextStyle = typeof NORMAL | typeof BOLD | typeof ITALIC | typeof BOLDITALIC;
 type TextAlignHoriz = typeof LEFT | typeof CENTER | typeof RIGHT;
 type TextAlignVert = typeof TOP | typeof CENTER | typeof BOTTOM | typeof BASELINE;
+type ColorMode = typeof RGB | typeof HSL | typeof HSB;
 type ColorLike = number | string | number[];
 declare function createCanvas(w: number, h: number, canvas: HTMLCanvasElement): Renderer;
 declare function createCanvas(w: number, h: number, renderer: RendererType, canvas: HTMLCanvasElement): Renderer;
 declare function fill(color: ColorLike): void;
 declare function stroke(color: ColorLike): void;
+declare function color(color: ColorLike): any;
 declare namespace p5Utils {
     class CanvasUtils {
         private constructor();
@@ -21,6 +23,15 @@ declare namespace p5Utils {
          * @param maxY The maximum allowed height (leave null if none, but then maxX is required)
          */
         static aspectToSize(aspectRatio: number, maxX?: number, maxY?: number): Vector2;
+    }
+    /**
+     * Contains static methods that help with using and accessing data from the p5.Color class
+     */
+    class ColorUtils {
+        private constructor();
+        static isColorLike(color: any): boolean;
+        static getRGBAValues(value: ColorLike | any): number[];
+        static getNormalizedRGBAValues(value: ColorLike | any): number[];
     }
     class DrawUtils {
         private constructor();
