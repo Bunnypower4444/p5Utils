@@ -41,21 +41,46 @@ namespace p5Utils.Ext
             if (time <= 0 || segments.length <= 0)
                 return;
 
+            const len = getLength(segments);
+            if (len <= 0)
+                return;
+
             graphics.push();
+
+            const delayCharTimeRatio = enterAnim.relativeCharDelay / enterAnim.relativeTimePerChar;
+            const relativeTotalTime = (len - 1) * delayCharTimeRatio + 1;
+            const relativeTime = time * relativeTotalTime;
 
             // adjust for justify
             position = position.sub(
                 justify.mult(
                     new Vector2(getWidth(segments, textSize, font), textSize)));
+            let charsDrawn = 0;
             for (const segment of segments)
             {
+                const l = segment.text.length;
+                if (l <= 0)
+                    continue;
+
+                let t = relativeTime - charsDrawn * delayCharTimeRatio;
+                if (t <= 0)
+                    break;
+
+                let totalT = (l - 1) * delayCharTimeRatio + 1;
+
                 // TODO: CALCULATE CORRECT TIMES!!!!
-                segment.drawEnterAnim(graphics, position, textSize, font, time, enterAnim, Vector2.zero, alpha);
+                segment.drawEnterAnim(graphics, position, textSize, font, t / totalT, enterAnim, Vector2.zero, alpha);
 
                 position = position.withX(position.x + segment.getWidth(textSize, font));
+                charsDrawn += segment.text.length;
             }
 
             graphics.pop();
+        }
+
+        export function getLength(segments: FancyText): number
+        {
+            return segments.reduce<number>((pval, val) => pval + val.text.length, 0);
         }
 
         export function getWidth(segments: FancyText, textSize: number, font: string): number
@@ -225,11 +250,12 @@ namespace p5Utils.Ext
                 graphics.scale(scale);
 
                 const delayCharTimeRatio = enterAnim.relativeCharDelay / enterAnim.relativeTimePerChar;
-                const animRelativeTime = (this.text.length - 1) * delayCharTimeRatio + 1;
+                const relativeTotalTime = (this.text.length - 1) * delayCharTimeRatio + 1;
+                const relativeTime = time * relativeTotalTime;
 
-                let completedChars = time * animRelativeTime < 1
+                let completedChars = relativeTime < 1
                     ? 0
-                    : 1 + Math.floor((time * animRelativeTime - 1) / delayCharTimeRatio);
+                    : 1 + Math.floor((relativeTime - 1) / delayCharTimeRatio);
                 
                 let completedStr = this.text.slice(0, completedChars);
                 
@@ -243,7 +269,7 @@ namespace p5Utils.Ext
                 let len = Math.min(this.text.length, completedChars + Math.ceil(1 / delayCharTimeRatio));
                 for (let i = completedChars; i < len; i++)
                 {
-                    let ease = enterAnim.ease(time * animRelativeTime - i * delayCharTimeRatio);
+                    let ease = enterAnim.ease(relativeTime - i * delayCharTimeRatio);
                     const char = this.text[i];
 
                     let animOffset = animDir.mult(textSize * ease * enterAnim.relativeDistance);
